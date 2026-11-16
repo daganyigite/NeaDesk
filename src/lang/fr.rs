@@ -826,5 +826,13 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("install-directory-not-empty-tip", "Le dossier sélectionné n’est pas vide. L’installation peut supprimer des données existantes. Envisagez de choisir un autre dossier."),
         ("Request approval", "Demander l'approbation"),
         ("Forever", "Pour toujours"),
+        ("neadesk_your_device", "Votre poste"),
+        ("neadesk_give_info", "Donnez ces informations à la personne qui vous aide."),
+        ("neadesk_id_label", "Identifiant"),
+        ("neadesk_copy_id", "Copier l’identifiant"),
+        ("neadesk_control_remote", "Contrôler un poste distant"),
+        ("neadesk_enter_id", "Entrez l’identifiant du poste"),
+        ("neadesk_more_options", "Plus d’options"),
+        ("neadesk_ready", "Prêt, connecté au serveur"),
     ].iter().cloned().collect();
 }

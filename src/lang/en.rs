@@ -292,5 +292,13 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("api_server_empty_tip", "With API Server empty, your custom server defaults to HTTP. Contact your administrator to enable HTTPS."),
         ("android-logs-folder-tip", "Choose Android → media to store log files."),
         ("install-directory-not-empty-tip", "The selected folder is not empty. Installation may delete existing data. Consider choosing a different folder."),
+        ("neadesk_your_device", "Your device"),
+        ("neadesk_give_info", "Give this information to the person helping you."),
+        ("neadesk_id_label", "ID"),
+        ("neadesk_copy_id", "Copy ID"),
+        ("neadesk_control_remote", "Control a remote device"),
+        ("neadesk_enter_id", "Enter the device ID"),
+        ("neadesk_more_options", "More options"),
+        ("neadesk_ready", "Ready, connected to the server"),
     ].iter().cloned().collect();
 }

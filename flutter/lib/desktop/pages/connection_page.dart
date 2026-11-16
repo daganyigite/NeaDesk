@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -19,6 +18,7 @@ import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/autocomplete.dart';
 import '../../models/platform_model.dart';
+import '../widgets/neadesk_style.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 
 class OnlineStatusWidget extends StatefulWidget {
@@ -125,15 +125,17 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                         : Color.fromARGB(255, 224, 79, 95)),
               ),
             ).marginSymmetric(horizontal: em),
-            Container(
-              width: isIncomingOnly ? 226 : null,
-              child: _buildConnStatusMsg(),
+            Flexible(
+              child: Container(
+                width: isIncomingOnly ? 226 : null,
+                child: _buildConnStatusMsg(),
+              ),
             ),
             // stop
             if (!isIncomingOnly) startServiceWidget(),
             // ready && public
             // No need to show the guide if is custom client.
-            if (!isIncomingOnly) setupServerWidget(),
+            if (!isIncomingOnly && !bind.isCustomClient()) setupServerWidget(),
           ],
         );
 
@@ -162,7 +164,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               ? translate("connecting_status")
               : stateGlobal.svcStatus.value == SvcStatus.notReady
                   ? translate("not_ready_status")
-                  : translate('Ready'),
+                  : translate('neadesk_ready'),
       style: TextStyle(fontSize: em),
     );
   }
@@ -303,25 +305,19 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   @override
   Widget build(BuildContext context) {
-    final isOutgoingOnly = bind.isOutgoingOnly();
-    return Column(
-      children: [
-        Expanded(
-            child: Column(
-          children: [
-            Row(
-              children: [
-                Flexible(child: _buildRemoteIDTextField(context)),
-              ],
-            ).marginOnly(top: 22),
-            SizedBox(height: 12),
-            Divider().paddingOnly(right: 12),
-            Expanded(child: PeerTabPage()),
-          ],
-        ).paddingOnly(left: 12.0)),
-        if (!isOutgoingOnly) const Divider(height: 1),
-        if (!isOutgoingOnly) OnlineStatusWidget()
-      ],
+    // NEADESK : mise en page de la maquette (l'etat de la connexion est
+    // affiche en bas du panneau "Votre poste").
+    return Container(
+      color: NeaStyle.page(context),
+      padding: const EdgeInsets.only(left: 32, right: 20, top: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildRemoteIDTextField(context),
+          const SizedBox(height: 24),
+          Expanded(child: PeerTabPage()),
+        ],
+      ),
     );
   }
 
@@ -376,18 +372,14 @@ class _ConnectionPageState extends State<ConnectionPage>
   /// UI for the remote ID TextField.
   /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
-    var w = Container(
-      width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-      decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
-      child: Ink(
-        child: Column(
+    var w = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(translate('neadesk_control_remote').toUpperCase(),
+            style: NeaStyle.sectionTitle(context)),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            getConnectionPageTitle(context, false).marginOnly(bottom: 15),
-            Row(
-              children: [
                 Expanded(
                     child: RawAutocomplete<Peer>(
                   optionsBuilder: (TextEditingValue textEditingValue) {
@@ -452,22 +444,33 @@ class _ConnectionPageState extends State<ConnectionPage>
                           enableSuggestions: false,
                           keyboardType: TextInputType.visiblePassword,
                           focusNode: fieldFocusNode,
-                          style: const TextStyle(
-                            fontFamily: 'WorkSans',
-                            fontSize: 22,
-                            height: 1.4,
-                          ),
+                          style: NeaStyle.monoStyle(context, 18,
+                              weight: FontWeight.w500),
                           maxLines: 1,
                           cursorColor:
                               Theme.of(context).textTheme.titleLarge?.color,
                           decoration: InputDecoration(
-                              filled: false,
+                              filled: true,
+                              fillColor: NeaStyle.panel(context),
+                              isDense: true,
                               counterText: '',
                               hintText: _idInputFocused.value
                                   ? null
-                                  : translate('Enter Remote ID'),
+                                  : translate('neadesk_enter_id'),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                      color: NeaStyle.field(context))),
+                              enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                      color: NeaStyle.field(context))),
+                              focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                      color: NeaStyle.accent, width: 1.5)),
                               contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 13)),
+                                  horizontal: 16, vertical: 13)),
                           controller: fieldTextEditingController,
                           inputFormatters: [IDTextInputFormatter()],
                           onChanged: (v) {
@@ -546,39 +549,57 @@ class _ConnectionPageState extends State<ConnectionPage>
                     );
                   },
                 )),
-              ],
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                style: NeaStyle.primary(),
+                onPressed: () {
+                  onConnect();
+                },
+                child: Text(translate("Connect")),
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 13.0),
-              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                SizedBox(
-                  height: 28.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    child: Text(translate("Connect")),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  height: 28.0,
-                  width: 28.0,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: StatefulBuilder(
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(children: [
+          OutlinedButton.icon(
+            style: NeaStyle.outlined(context),
+            onPressed: () => onConnect(isFileTransfer: true),
+            icon: const Icon(Icons.folder_outlined, size: 16),
+            label: Text(translate('Transfer file')),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: NeaStyle.panel(context),
+              border: Border.all(color: NeaStyle.field(context)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: StatefulBuilder(
                       builder: (context, setState) {
                         var offset = Offset(0, 0);
                         return Obx(() => InkWell(
-                              child: _menuOpen.value
-                                  ? Transform.rotate(
-                                      angle: pi,
-                                      child: Icon(IconFont.more, size: 14),
-                                    )
-                                  : Icon(IconFont.more, size: 14),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 14),
+                                child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(translate('neadesk_more_options'),
+                                          style: const TextStyle(fontSize: 13)),
+                                      const SizedBox(width: 8),
+                                      _menuOpen.value
+                                          ? Transform.rotate(
+                                              angle: pi,
+                                              child: Icon(IconFont.more,
+                                                  size: 14),
+                                            )
+                                          : Icon(IconFont.more, size: 14),
+                                    ]),
+                              ),
                               onTapDown: (e) {
                                 offset = e.globalPosition;
                               },
@@ -650,15 +671,11 @@ class _ConnectionPageState extends State<ConnectionPage>
                             ));
                       },
                     ),
-                  ),
-                ),
-              ]),
-            ),
-          ],
-        ),
-      ),
+          ),
+        ]),
+      ],
     );
     return Container(
-        constraints: const BoxConstraints(maxWidth: 600), child: w);
+        constraints: const BoxConstraints(maxWidth: 640), child: w);
   }
 }
