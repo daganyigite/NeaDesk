@@ -863,5 +863,18 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("neadesk_tab_lan", "Réseau local"),
         ("neadesk_tab_ab", "Carnet"),
         ("neadesk_tab_group", "Appareils"),
+        ("neadesk_wants_control_{}", "{} veut contrôler ce poste"),
+        ("neadesk_wants_access_{}", "{} demande l’accès à ce poste"),
+        ("neadesk_accept_warning", "N’acceptez que si vous connaissez cette personne."),
+        ("neadesk_refuse", "Refuser"),
+        ("neadesk_perm_screen", "Voir l’écran"),
+        ("neadesk_perm_keyboard", "Utiliser la souris et le clavier"),
+        ("neadesk_perm_clipboard", "Partager le presse-papiers"),
+        ("neadesk_perm_file", "Transférer des fichiers"),
+        ("neadesk_perm_audio", "Entendre le son"),
+        ("neadesk_perm_restart", "Redémarrer le poste"),
+        ("neadesk_perm_recording", "Enregistrer la session"),
+        ("neadesk_perm_block", "Bloquer mon clavier et ma souris"),
+        ("neadesk_perm_privacy", "Masquer mon écran (mode confidentialité)"),
     ].iter().cloned().collect();
 }

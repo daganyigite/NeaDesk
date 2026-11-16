@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
+import 'package:flutter_hbb/desktop/widgets/neadesk_style.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_hbb/models/cm_file_model.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
@@ -362,26 +363,35 @@ class ConnectionManagerState extends State<ConnectionManager>
 
 Widget buildConnectionCard(Client client) {
   return Consumer<ServerModel>(
-    builder: (context, value, child) => Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      key: ValueKey(client.id),
-      children: [
-        _CmHeader(client: client),
-        client.type_() == ClientType.file ||
-                client.type_() == ClientType.portForward ||
-                client.type_() == ClientType.terminal ||
-                client.disconnected
-            ? Offstage()
-            : _PrivilegeBoard(client: client),
-        Expanded(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: _CmControlPanel(client: client),
-          ),
-        )
-      ],
-    ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
+    builder: (context, value, child) {
+      final showPermissions = !(client.type_() == ClientType.file ||
+          client.type_() == ClientType.portForward ||
+          client.type_() == ClientType.terminal ||
+          client.disconnected);
+      // NEADESK : en-tête, autorisations (défilantes) et boutons en bas.
+      return Container(
+        key: ValueKey(client.id),
+        color: NeaStyle.panel(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _CmHeader(client: client),
+            Expanded(
+              child: showPermissions
+                  ? SingleChildScrollView(child: _PrivilegeBoard(client: client))
+                  : const SizedBox(),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                  border:
+                      Border(top: BorderSide(color: NeaStyle.line(context)))),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: _CmControlPanel(client: client),
+            ),
+          ],
+        ),
+      );
+    },
   );
 }
 
@@ -455,125 +465,155 @@ class _CmHeaderState extends State<_CmHeader>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final waiting = !client.authorized;
+    final isRemote = client.type_() == ClientType.remote;
+    // NEADESK : « Koffi veut contrôler ce poste » tant que la demande attend.
+    final title = waiting
+        ? translate(isRemote
+            ? 'neadesk_wants_control_{${client.name}}'
+            : 'neadesk_wants_access_{${client.name}}')
+        : client.name;
+    final small = TextStyle(fontSize: 12, color: NeaStyle.muted(context));
     return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 8, 14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
-          ],
-        ),
-      ),
-      margin: EdgeInsets.symmetric(horizontal: 5.0, vertical: 10.0),
-      padding: EdgeInsets.only(
-        top: 10.0,
-        bottom: 10.0,
-        left: 10.0,
-        right: 5.0,
-      ),
-      child: Row(
+          border: Border(bottom: BorderSide(color: NeaStyle.line(context)))),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildClientAvatar().marginOnly(right: 10.0),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FittedBox(
-                    child: Text(
-                  client.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  maxLines: 1,
-                )),
-                FittedBox(
-                  child: Text(
-                    "(${client.peerId})",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ),
-                if (client.type_() == ClientType.terminal)
-                  FittedBox(
-                    child: Text(
-                      translate("Terminal"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.type_() == ClientType.file)
-                  FittedBox(
-                    child: Text(
-                      translate("Transfer file"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.type_() == ClientType.camera)
-                  FittedBox(
-                    child: Text(
-                      translate("View camera"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.portForward.isNotEmpty)
-                  FittedBox(
-                    child: Text(
-                      "Port Forward: ${client.portForward}",
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                SizedBox(height: 10.0),
-                FittedBox(
-                    child: Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildClientAvatar().marginOnly(right: 12.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      client.authorized
-                          ? client.disconnected
-                              ? translate("Disconnected")
-                              : translate("Connected")
-                          : "${translate("Request access to your device")}...",
-                      style: TextStyle(color: Colors.white),
-                    ).marginOnly(right: 8.0),
+                      title,
+                      style: TextStyle(
+                        color: NeaStyle.text(context),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${translate('neadesk_id_label')} ${client.peerId}',
+                      style: TextStyle(
+                          fontFamily: NeaStyle.mono,
+                          fontFamilyFallback: NeaStyle.monoFallback,
+                          fontSize: 13,
+                          color: NeaStyle.muted(context)),
+                    ),
+                    if (client.type_() == ClientType.terminal)
+                      Text(translate("Terminal"), style: small),
+                    if (client.type_() == ClientType.file)
+                      Text(translate("Transfer file"), style: small),
+                    if (client.type_() == ClientType.camera)
+                      Text(translate("View camera"), style: small),
+                    if (client.portForward.isNotEmpty)
+                      Text("Port Forward: ${client.portForward}",
+                          style: small),
                     if (client.authorized)
-                      Obx(
-                        () => Text(
-                          formatDurationToTime(
-                            Duration(seconds: _time.value),
-                          ),
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      )
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: client.disconnected
+                                  ? NeaStyle.muted(context)
+                                  : NeaStyle.success(context),
+                            ),
+                          ).marginOnly(right: 6),
+                          Text(
+                            client.disconnected
+                                ? translate("Disconnected")
+                                : translate("Connected"),
+                            style: TextStyle(
+                                fontSize: 13, color: NeaStyle.text(context)),
+                          ).marginOnly(right: 8.0),
+                          if (!client.disconnected)
+                            Obx(
+                              () => Text(
+                                formatDurationToTime(
+                                  Duration(seconds: _time.value),
+                                ),
+                                style: TextStyle(
+                                    fontFamily: NeaStyle.mono,
+                                    fontFamilyFallback: NeaStyle.monoFallback,
+                                    fontSize: 13,
+                                    color: NeaStyle.muted(context)),
+                              ),
+                            )
+                        ],
+                      ).marginOnly(top: 6),
                   ],
-                ))
-              ],
-            ),
+                ),
+              ),
+              Offstage(
+                offstage: !client.authorized ||
+                    (client.type_() != ClientType.remote &&
+                        client.type_() != ClientType.file &&
+                        client.type_() != ClientType.camera),
+                child: IconButton(
+                  tooltip: translate(client.type_() == ClientType.file
+                      ? 'Transfer file'
+                      : 'Chat'),
+                  focusColor: NeaStyle.focusFill(context),
+                  onPressed: () => checkClickTime(client.id, () {
+                    if (client.type_() == ClientType.file) {
+                      gFFI.chatModel.toggleCMFilePage();
+                    } else {
+                      gFFI.chatModel.toggleCMChatPage(
+                          MessageKey(client.peerId, client.id));
+                    }
+                  }),
+                  icon: SvgPicture.asset(
+                    client.type_() == ClientType.file
+                        ? 'assets/file_transfer.svg'
+                        : 'assets/chat2.svg',
+                    colorFilter: ColorFilter.mode(
+                        NeaStyle.text(context), BlendMode.srcIn),
+                  ),
+                  splashRadius: kDesktopIconButtonSplashRadius,
+                ),
+              )
+            ],
           ),
-          Offstage(
-            offstage: !client.authorized ||
-                (client.type_() != ClientType.remote &&
-                    client.type_() != ClientType.file &&
-                    client.type_() != ClientType.camera),
-            child: IconButton(
-              onPressed: () => checkClickTime(client.id, () {
-                if (client.type_() == ClientType.file) {
-                  gFFI.chatModel.toggleCMFilePage();
-                } else {
-                  gFFI.chatModel
-                      .toggleCMChatPage(MessageKey(client.peerId, client.id));
-                }
-              }),
-              icon: SvgPicture.asset(client.type_() == ClientType.file
-                  ? 'assets/file_transfer.svg'
-                  : 'assets/chat2.svg'),
-              splashRadius: kDesktopIconButtonSplashRadius,
-            ),
-          )
+          if (waiting) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: NeaStyle.warning(context).withOpacity(0.12),
+                border: Border.all(
+                    color: NeaStyle.warning(context).withOpacity(0.5)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 18, color: NeaStyle.warning(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      translate('neadesk_accept_warning'),
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: NeaStyle.text(context)),
+                    ),
+                  ),
+                ],
+              ),
+            ).marginOnly(right: 8),
+          ],
         ],
       ),
     );
@@ -585,28 +625,35 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          size: 70,
-          borderRadius: 15,
+          size: 44,
+          borderRadius: 22,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
   }
 
+  /// NEADESK : initiales du nom (« Koffi D. » → « KD ») dans un rond.
   Widget _buildInitialAvatar() {
+    final words =
+        client.name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    final initials = words.isEmpty
+        ? '?'
+        : words.take(2).map((w) => w.characters.first.toUpperCase()).join();
     return Container(
-      width: 70,
-      height: 70,
+      width: 44,
+      height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: str2color(client.name),
-        borderRadius: BorderRadius.circular(15.0),
+        color: NeaStyle.accent.withOpacity(0.18),
+        shape: BoxShape.circle,
+        border: Border.all(color: NeaStyle.accent.withOpacity(0.6)),
       ),
       child: Text(
-        client.name.isNotEmpty ? client.name[0] : '?',
+        initials,
         style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          fontSize: 55,
+          fontWeight: FontWeight.w700,
+          color: NeaStyle.text(context),
+          fontSize: 16,
         ),
       ),
     );
@@ -624,241 +671,90 @@ class _PrivilegeBoard extends StatefulWidget {
 
 class _PrivilegeBoardState extends State<_PrivilegeBoard> {
   late final client = widget.client;
-  Widget buildPermissionIcon(bool enabled, IconData iconData,
-      Function(bool)? onTap, String tooltipText,
+
+  /// NEADESK : une ligne « libellé + interrupteur » par autorisation.
+  /// [name] est le nom envoyé au moteur ; null = ligne non modifiable.
+  Widget buildPermissionRow(String label, bool enabled, String? name,
+      void Function(bool) apply,
       {required bool canModify}) {
-    return Tooltip(
-      message: "$tooltipText: ${enabled ? "ON" : "OFF"}",
-      waitDuration: Duration.zero,
-      child: Container(
-        decoration: BoxDecoration(
-          color: enabled
-              ? (canModify ? MyTheme.accent : MyTheme.accent.withOpacity(0.6))
-              : Colors.grey[700],
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        padding: EdgeInsets.all(8.0),
-        child: InkWell(
-          onTap: canModify
-              ? () =>
-                  checkClickTime(widget.client.id, () => onTap?.call(!enabled))
-              : null,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(
-                child: Icon(
-                  iconData,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
+    final editable = canModify && name != null;
+    return SwitchListTile(
+      value: enabled,
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      activeColor: NeaStyle.onAccent,
+      activeTrackColor: NeaStyle.accent,
+      title: Text(
+        translate(label),
+        style: TextStyle(fontSize: 14, color: NeaStyle.text(context)),
       ),
+      onChanged: editable
+          ? (value) => checkClickTime(widget.client.id, () {
+                bind.cmSwitchPermission(
+                    connId: client.id, name: name, enabled: value);
+                setState(() => apply(value));
+              })
+          : null,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final crossAxisCount = 4;
-    final spacing = 10.0;
-    final canModifyPermission =
+    final canModify =
         bind.mainGetBuildinOption(key: kOptionEnablePermChangeInAcceptWindow) !=
             'N';
-    return Container(
-      width: double.infinity,
-      height: 160.0,
-      margin: EdgeInsets.all(5.0),
-      padding: EdgeInsets.all(5.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        color: Theme.of(context).colorScheme.background,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 1,
-            offset: Offset(0, 1.5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            translate("Permissions"),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ).marginOnly(left: 4.0, bottom: 8.0),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: crossAxisCount,
-              padding: EdgeInsets.symmetric(horizontal: spacing),
-              mainAxisSpacing: spacing,
-              crossAxisSpacing: spacing,
-              children: client.type_() == ClientType.camera
-                  ? [
-                      buildPermissionIcon(
-                        client.audio,
-                        Icons.volume_up_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "audio",
-                              enabled: enabled);
-                          setState(() {
-                            client.audio = enabled;
-                          });
-                        },
-                        translate('Enable audio'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.recording,
-                        Icons.videocam_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "recording",
-                              enabled: enabled);
-                          setState(() {
-                            client.recording = enabled;
-                          });
-                        },
-                        translate('Enable recording session'),
-                        canModify: canModifyPermission,
-                      ),
-                    ]
-                  : [
-                      buildPermissionIcon(
-                        client.keyboard,
-                        Icons.keyboard,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "keyboard",
-                              enabled: enabled);
-                          setState(() {
-                            client.keyboard = enabled;
-                          });
-                        },
-                        translate('Enable keyboard/mouse'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.clipboard,
-                        Icons.assignment_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "clipboard",
-                              enabled: enabled);
-                          setState(() {
-                            client.clipboard = enabled;
-                          });
-                        },
-                        translate('Enable clipboard'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.audio,
-                        Icons.volume_up_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "audio",
-                              enabled: enabled);
-                          setState(() {
-                            client.audio = enabled;
-                          });
-                        },
-                        translate('Enable audio'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.file,
-                        Icons.upload_file_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "file",
-                              enabled: enabled);
-                          setState(() {
-                            client.file = enabled;
-                          });
-                        },
-                        translate('Enable file copy and paste'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.restart,
-                        Icons.restart_alt_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "restart",
-                              enabled: enabled);
-                          setState(() {
-                            client.restart = enabled;
-                          });
-                        },
-                        translate('Enable remote restart'),
-                        canModify: canModifyPermission,
-                      ),
-                      buildPermissionIcon(
-                        client.recording,
-                        Icons.videocam_rounded,
-                        (enabled) {
-                          bind.cmSwitchPermission(
-                              connId: client.id,
-                              name: "recording",
-                              enabled: enabled);
-                          setState(() {
-                            client.recording = enabled;
-                          });
-                        },
-                        translate('Enable recording session'),
-                        canModify: canModifyPermission,
-                      ),
-                      // only windows support block input
-                      if (isWindows)
-                        buildPermissionIcon(
-                          client.blockInput,
-                          Icons.block,
-                          (enabled) {
-                            bind.cmSwitchPermission(
-                                connId: client.id,
-                                name: "block_input",
-                                enabled: enabled);
-                            setState(() {
-                              client.blockInput = enabled;
-                            });
-                          },
-                          translate('Enable blocking user input'),
-                          canModify: canModifyPermission,
-                        ),
-                      if (bind.mainSupportedPrivacyModeImpls() != '[]')
-                        buildPermissionIcon(
-                          client.privacyMode,
-                          Icons.visibility_off,
-                          (enabled) {
-                            bind.cmSwitchPermission(
-                                connId: client.id,
-                                name: "privacy_mode",
-                                enabled: enabled);
-                            setState(() {
-                              client.privacyMode = enabled;
-                            });
-                          },
-                          translate('Enable privacy mode'),
-                          canModify: canModifyPermission,
-                        )
-                    ],
-            ),
-          ),
-        ],
-      ),
+    final rows = client.type_() == ClientType.camera
+        ? [
+            buildPermissionRow('neadesk_perm_audio', client.audio, 'audio',
+                (v) => client.audio = v,
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_recording', client.recording,
+                'recording', (v) => client.recording = v,
+                canModify: canModify),
+          ]
+        : [
+            // Voir l'écran est toujours actif pendant une session.
+            buildPermissionRow('neadesk_perm_screen', true, null, (_) {},
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_keyboard', client.keyboard,
+                'keyboard', (v) => client.keyboard = v,
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_clipboard', client.clipboard,
+                'clipboard', (v) => client.clipboard = v,
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_file', client.file, 'file',
+                (v) => client.file = v,
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_audio', client.audio, 'audio',
+                (v) => client.audio = v,
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_restart', client.restart,
+                'restart', (v) => client.restart = v,
+                canModify: canModify),
+            buildPermissionRow('neadesk_perm_recording', client.recording,
+                'recording', (v) => client.recording = v,
+                canModify: canModify),
+            // only windows support block input
+            if (isWindows)
+              buildPermissionRow('neadesk_perm_block', client.blockInput,
+                  'block_input', (v) => client.blockInput = v,
+                  canModify: canModify),
+            if (bind.mainSupportedPrivacyModeImpls() != '[]')
+              buildPermissionRow('neadesk_perm_privacy', client.privacyMode,
+                  'privacy_mode', (v) => client.privacyMode = v,
+                  canModify: canModify),
+          ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          translate("Permissions").toUpperCase(),
+          style: NeaStyle.sectionTitle(context),
+        ).paddingOnly(left: 16, right: 16, top: 14, bottom: 4),
+        ...rows,
+        const SizedBox(height: 6),
+      ],
     );
   }
 }
@@ -960,7 +856,7 @@ class _CmControlPanel extends StatelessWidget {
               Expanded(
                 child: buildButton(
                   context,
-                  color: Colors.red,
+                  color: NeaStyle.error(context),
                   onClick: () => closeVoiceCall(),
                   icon: Icon(
                     Icons.call_end_rounded,
@@ -993,7 +889,7 @@ class _CmControlPanel extends StatelessWidget {
               Expanded(
                 child: buildButton(
                   context,
-                  color: Colors.red,
+                  color: NeaStyle.error(context),
                   onClick: () => handleVoiceCall(false),
                   icon: Icon(
                     Icons.phone_disabled_rounded,
@@ -1010,7 +906,7 @@ class _CmControlPanel extends StatelessWidget {
         Offstage(
           offstage: !client.fromSwitch,
           child: buildButton(context,
-              color: Colors.purple,
+              color: NeaStyle.accent,
               onClick: () => handleSwitchBack(context),
               icon: Icon(Icons.reply, color: Colors.white),
               text: "Switch Sides",
@@ -1038,7 +934,7 @@ class _CmControlPanel extends StatelessWidget {
           children: [
             Expanded(
               child: buildButton(context,
-                  color: Colors.redAccent,
+                  color: NeaStyle.error(context),
                   onClick: handleDisconnect,
                   text: 'Disconnect',
                   icon: Icon(
@@ -1083,7 +979,7 @@ class _CmControlPanel extends StatelessWidget {
       children: [
         Offstage(
           offstage: !showElevation || !showAccept,
-          child: buildButton(context, color: Colors.green[700], onClick: () {
+          child: buildButton(context, color: NeaStyle.accentHover, onClick: () {
             handleAccept(context);
             handleElevate(context);
             windowManager.minimize();
@@ -1100,33 +996,29 @@ class _CmControlPanel extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (showAccept)
-              Expanded(
-                child: Column(
-                  children: [
-                    buildButton(
-                      context,
-                      color: MyTheme.accent,
-                      onClick: () {
-                        handleAccept(context);
-                        windowManager.minimize();
-                      },
-                      text: 'Accept',
-                      textColor: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
             Expanded(
               child: buildButton(
                 context,
                 color: Colors.transparent,
-                border: Border.all(color: Colors.grey),
+                border: Border.all(color: NeaStyle.field(context)),
                 onClick: handleDisconnect,
-                text: 'Cancel',
-                textColor: null,
+                text: 'neadesk_refuse',
+                textColor: NeaStyle.text(context),
               ),
             ),
+            if (showAccept)
+              Expanded(
+                child: buildButton(
+                  context,
+                  color: NeaStyle.accent,
+                  onClick: () {
+                    handleAccept(context);
+                    windowManager.minimize();
+                  },
+                  text: 'Accept',
+                  textColor: NeaStyle.onAccent,
+                ),
+              ),
           ],
         ),
       ],
@@ -1147,25 +1039,28 @@ class _CmControlPanel extends StatelessWidget {
     if (icon != null) {
       textWidget = Text(
         translate(text),
-        style: TextStyle(color: textColor),
+        style: TextStyle(
+            color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
         textAlign: TextAlign.center,
       );
     } else {
       textWidget = Expanded(
         child: Text(
           translate(text),
-          style: TextStyle(color: textColor),
+          style: TextStyle(
+              color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
         ),
       );
     }
-    final borderRadius = BorderRadius.circular(10.0);
+    final borderRadius = BorderRadius.circular(8.0);
     final btn = Container(
-      height: 28,
+      height: 40,
       decoration: BoxDecoration(
           color: color, borderRadius: borderRadius, border: border),
       child: InkWell(
         borderRadius: borderRadius,
+        focusColor: Colors.white.withOpacity(0.18),
         onTap: () {
           if (onClick == null) return;
           checkClickTime(client.id, onClick);

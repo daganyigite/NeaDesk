@@ -329,5 +329,18 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("neadesk_tab_lan", "Local network"),
         ("neadesk_tab_ab", "Contacts"),
         ("neadesk_tab_group", "Devices"),
+        ("neadesk_wants_control_{}", "{} wants to control this device"),
+        ("neadesk_wants_access_{}", "{} is requesting access to this device"),
+        ("neadesk_accept_warning", "Only accept if you know this person."),
+        ("neadesk_refuse", "Decline"),
+        ("neadesk_perm_screen", "See the screen"),
+        ("neadesk_perm_keyboard", "Use the mouse and keyboard"),
+        ("neadesk_perm_clipboard", "Share the clipboard"),
+        ("neadesk_perm_file", "Transfer files"),
+        ("neadesk_perm_audio", "Hear the sound"),
+        ("neadesk_perm_restart", "Restart the device"),
+        ("neadesk_perm_recording", "Record the session"),
+        ("neadesk_perm_block", "Block my keyboard and mouse"),
+        ("neadesk_perm_privacy", "Hide my screen (privacy mode)"),
     ].iter().cloned().collect();
 }
