@@ -224,7 +224,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ],
           ),
           Text(
-            '${translate('Version')} ${bind.mainGetVersion()}',
+            '${translate('Version')} $version',
             style: TextStyle(fontSize: 12, color: NeaStyle.muted(context)),
           ).marginOnly(left: 10, top: 2),
         ],
