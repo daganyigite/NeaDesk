@@ -1,0 +1,17 @@
+# NEADESK — compilation pour toutes les plateformes (Windows, macOS, Linux, Android, iOS).
+# Lancement manuel : onglet Actions → "NEADESK Toutes plateformes" → Run workflow.
+name: NEADESK Toutes plateformes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-all:
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+    with:
+      upload-artifact: true
+      upload-tag: "neadesk-test"
