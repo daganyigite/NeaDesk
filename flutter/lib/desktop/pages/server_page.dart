@@ -977,23 +977,8 @@ class _CmControlPanel extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Offstage(
-          offstage: !showElevation || !showAccept,
-          child: buildButton(context, color: NeaStyle.accentHover, onClick: () {
-            handleAccept(context);
-            handleElevate(context);
-            windowManager.minimize();
-          },
-              text: 'Accept and Elevate',
-              icon: Icon(
-                Icons.security_rounded,
-                color: Colors.white,
-                size: 14,
-              ),
-              textColor: Colors.white,
-              tooltip: 'accept_and_elevate_btn_tooltip'),
-        ),
         Row(
+
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
@@ -1021,6 +1006,21 @@ class _CmControlPanel extends StatelessWidget {
               ),
           ],
         ),
+        // NEADESK : option avancée, discrète, sous les boutons principaux.
+        if (showElevation && showAccept)
+          TextButton.icon(
+            style: NeaStyle.link(context).copyWith(
+                foregroundColor:
+                    MaterialStatePropertyAll(NeaStyle.muted(context))),
+            onPressed: () => checkClickTime(client.id, () {
+              handleAccept(context);
+              handleElevate(context);
+              windowManager.minimize();
+            }),
+            icon: const Icon(Icons.admin_panel_settings_outlined, size: 16),
+            label: Text(translate('neadesk_accept_admin'),
+                style: const TextStyle(fontSize: 12.5)),
+          ).marginOnly(top: 2),
       ],
     ).marginOnly(bottom: buttonBottomMargin);
   }

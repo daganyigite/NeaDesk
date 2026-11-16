@@ -342,5 +342,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("neadesk_perm_recording", "Record the session"),
         ("neadesk_perm_block", "Block my keyboard and mouse"),
         ("neadesk_perm_privacy", "Hide my screen (privacy mode)"),
+        ("neadesk_accept_admin", "Accept with administrator rights"),
     ].iter().cloned().collect();
 }
