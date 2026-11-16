@@ -15,3 +15,16 @@ jobs:
     with:
       upload-artifact: true
       upload-tag: "neadesk-test"
+
+  # NEADESK : les fichiers publiés s'appellent neadesk-* au lieu de rustdesk-*.
+  renommer:
+    needs: [build-all]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+      - name: Renommer les fichiers de la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/neadesk-renommer.sh "${{ github.repository }}" "neadesk-test"
