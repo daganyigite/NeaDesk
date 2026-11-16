@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -21,7 +22,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
-import '../widgets/button.dart';
 import '../widgets/neadesk_style.dart';
 
 class DesktopHomePage extends StatefulWidget {
@@ -48,6 +48,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  bool _showPassword = false;
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
@@ -63,7 +64,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
+        if (!isIncomingOnly)
+          VerticalDivider(width: 1, color: NeaStyle.line(context)),
         if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
       ],
     ));
@@ -78,6 +80,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
+      _buildBrand(context),
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
@@ -103,7 +106,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     ];
     if (isIncomingOnly) {
       children.addAll([
-        Divider(),
+        Divider(color: NeaStyle.line(context)),
         OnlineStatusWidget(
           onSvcStatusChanged: () {
             if (isInHomePage()) {
@@ -134,9 +137,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     ),
                   ),
                 ),
-                // NEADESK : l'état de la connexion est en bas du panneau.
-                if (!isIncomingOnly && !isOutgoingOnly)
-                  OnlineStatusWidget().marginOnly(left: 10, bottom: 8),
+                if (!isIncomingOnly && !isOutgoingOnly) _buildFooter(context),
               ],
             ),
             if (isOutgoingOnly)
@@ -172,6 +173,126 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  /// NEADESK : logo et nom en haut du panneau gauche.
+  Widget _buildBrand(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(left: 24, right: 16, top: 22),
+      child: Row(
+        children: [
+          SvgPicture.asset('assets/icon.svg', width: 28, height: 28),
+          const SizedBox(width: 10),
+          Text(
+            bind.mainGetAppNameSync(),
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: NeaStyle.text(context)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// NEADESK : bas du panneau gauche (état, Paramètres, Aide, version).
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: NeaStyle.line(context)))),
+      padding: const EdgeInsets.only(left: 10, right: 12, top: 4, bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OnlineStatusWidget(),
+          Row(
+            children: [
+              if (!bind.isDisableSettings())
+                TextButton.icon(
+                  style: NeaStyle.link(context),
+                  onPressed: () => DesktopTabPage.onAddSetting(),
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  label: Text(translate('Settings')),
+                ),
+              TextButton.icon(
+                style: NeaStyle.link(context),
+                onPressed: () => _showHelp(context),
+                icon: const Icon(Icons.help_outline_rounded, size: 18),
+                label: Text(translate('neadesk_help')),
+              ),
+            ],
+          ),
+          Text(
+            '${translate('Version')} ${bind.mainGetVersion()}',
+            style: TextStyle(fontSize: 12, color: NeaStyle.muted(context)),
+          ).marginOnly(left: 10, top: 2),
+        ],
+      ),
+    );
+  }
+
+  /// NEADESK : fenêtre d'aide (se faire aider / aider quelqu'un).
+  void _showHelp(BuildContext context) {
+    Widget section(String title, List<String> steps) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(translate(title),
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: NeaStyle.text(context))),
+            const SizedBox(height: 8),
+            for (var i = 0; i < steps.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text('${i + 1}. ${translate(steps[i])}',
+                    style: TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        color: NeaStyle.muted(context))),
+              ),
+          ],
+        );
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: NeaStyle.panel(context),
+        title: Text(translate('neadesk_help'),
+            style: TextStyle(color: NeaStyle.text(context))),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                section('neadesk_help_get', [
+                  'neadesk_help_get_1',
+                  'neadesk_help_get_2',
+                ]),
+                const SizedBox(height: 16),
+                section('neadesk_help_give', [
+                  'neadesk_step_1',
+                  'neadesk_help_give_2',
+                  'neadesk_help_give_3',
+                ]),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            autofocus: true,
+            style: NeaStyle.link(context),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(translate('Close')),
+          ),
+        ],
+      ),
+    );
+  }
+
   buildRightPane(BuildContext context) {
     return Container(
       color: NeaStyle.page(context),
@@ -188,7 +309,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final model = gFFI.serverModel;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(left: 24, right: 16, bottom: 20),
+      padding: const EdgeInsets.only(left: 24, right: 16, bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -235,6 +356,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     RxBool hover = false.obs;
     return InkWell(
       onTap: DesktopTabPage.onAddSetting,
+      focusColor: NeaStyle.focusFill(context),
+      customBorder: const CircleBorder(),
       child: Tooltip(
         message: translate('Settings'),
         child: Obx(
@@ -270,7 +393,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         model.verificationMethod != kUsePermanentPassword;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(left: 24, right: 16, bottom: 20),
+      padding: const EdgeInsets.only(left: 24, right: 16, bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -289,6 +412,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   child: TextFormField(
                     controller: model.serverPasswd,
                     readOnly: true,
+                    // NEADESK : mot de passe masqué par défaut.
+                    obscureText: showOneTime && !_showPassword,
+                    obscuringCharacter: '•',
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       filled: false,
@@ -300,13 +426,28 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   ).workaroundFreezeLinuxMint(),
                 ),
               ),
-              if (showOneTime)
+              if (showOneTime) ...[
+                NeaStyle.squareButton(context,
+                    icon: _showPassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    tooltip: translate(_showPassword
+                        ? 'neadesk_hide_password'
+                        : 'neadesk_show_password'),
+                    onTap: () => setState(() => _showPassword = !_showPassword)),
+                const SizedBox(width: 4),
+                NeaStyle.squareButton(context,
+                    icon: Icons.copy_rounded,
+                    tooltip: translate('neadesk_copy_password'),
+                    onTap: () => _copy(model.serverPasswd.text)),
+                const SizedBox(width: 4),
                 NeaStyle.squareButton(context,
                     icon: Icons.refresh_rounded,
                     tooltip: translate('Refresh Password'),
                     onTap: () => bind.mainUpdateTemporaryPassword()),
+              ],
               if (!bind.isDisableSettings()) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 NeaStyle.squareButton(context,
                     icon: Icons.edit_outlined,
                     tooltip: translate('Change Password'),
@@ -315,16 +456,34 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ],
             ],
           ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            style: NeaStyle.outlined(context),
+            onPressed: () => _copy(_invitation(model, showOneTime)),
+            icon: const Icon(Icons.send_outlined, size: 16),
+            label: Text(translate('neadesk_copy_invite')),
+          ),
         ],
       ),
     );
+  }
+
+  /// NEADESK : texte prêt à envoyer à la personne qui va aider.
+  String _invitation(ServerModel model, bool withPassword) {
+    final lines = [
+      translate('neadesk_invite_intro'),
+      '${translate('neadesk_id_label')} : ${model.serverId.text}',
+      if (withPassword)
+        '${translate('One-time Password')} : ${model.serverPasswd.text}',
+    ];
+    return lines.join('\n');
   }
 
   buildTip(BuildContext context) {
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(left: 24, right: 24, top: 28, bottom: 24),
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 22, bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -333,7 +492,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 style: NeaStyle.sectionTitle(context)),
             const SizedBox(height: 4),
             Text(translate('neadesk_give_info'),
-                style: NeaStyle.label(context)),
+                style: TextStyle(fontSize: 13, color: NeaStyle.muted(context))),
           ],
           if (isOutgoingOnly)
             Text(
@@ -384,7 +543,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             () async {
           await rustDeskWinManager.closeAllSubWindows();
           bind.mainGotoInstall();
-        });
+        }, closeButton: true);
       } else if (bind.mainIsInstalledLowerVersion()) {
         return buildInstallCard(
             "Status", "Your installation is lower version.", "Click to upgrade",
@@ -507,6 +666,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         content != 'install_daemon_tip') {
       return const SizedBox();
     }
+    // NEADESK : un encadré masqué reste masqué jusqu'à la fin de la session.
+    if (isCardClosed) {
+      return const SizedBox();
+    }
     void closeCard() async {
       if (closeOption != null) {
         await bind.mainSetLocalOption(key: closeOption, value: 'N');
@@ -522,98 +685,67 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     }
 
-    return Stack(
-      children: [
-        Container(
-          margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
-          child: Container(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
-                ],
-              )),
-              padding: EdgeInsets.all(20),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (title.isNotEmpty
-                          ? <Widget>[
-                              Center(
-                                  child: Text(
-                                translate(title),
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15),
-                              ).marginOnly(bottom: 6)),
-                            ]
-                          : <Widget>[]) +
-                      <Widget>[
-                        if (content.isNotEmpty)
-                          Text(
-                            translate(content),
-                            style: TextStyle(
-                                height: 1.5,
-                                color: Colors.white,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 13),
-                          ).marginOnly(bottom: 20)
-                      ] +
-                      (btnText.isNotEmpty
-                          ? <Widget>[
-                              Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FixedWidthButton(
-                                      width: 150,
-                                      padding: 8,
-                                      isOutline: true,
-                                      text: translate(btnText),
-                                      textColor: Colors.white,
-                                      borderColor: Colors.white,
-                                      textSize: 20,
-                                      radius: 10,
-                                      onTap: onPressed,
-                                    )
-                                  ])
-                            ]
-                          : <Widget>[]) +
-                      (help != null
-                          ? <Widget>[
-                              Center(
-                                  child: InkWell(
-                                      onTap: () async =>
-                                          await launchUrl(Uri.parse(link!)),
-                                      child: Text(
-                                        translate(help),
-                                        style: TextStyle(
-                                            decoration:
-                                                TextDecoration.underline,
-                                            color: Colors.white,
-                                            fontSize: 12),
-                                      )).marginOnly(top: 6)),
-                            ]
-                          : <Widget>[]))),
-        ),
-        if (closeButton != null && closeButton == true)
-          Positioned(
-            top: 18,
-            right: 0,
-            child: IconButton(
-              icon: Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 20,
-              ),
-              onPressed: closeCard,
+    // NEADESK : encadré discret (fond panneau, bordure et icône d'avertissement).
+    final warn = NeaStyle.warning(context);
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+          16, marginTop, 16, bind.isIncomingOnly() ? marginTop : 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 6, 14),
+      decoration: BoxDecoration(
+        color: NeaStyle.panel(context),
+        border: Border.all(color: warn),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, color: warn, size: 20)
+              .marginOnly(top: 1, right: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title.isNotEmpty)
+                  Text(
+                    translate(title),
+                    style: TextStyle(
+                        color: NeaStyle.text(context),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
+                  ).marginOnly(bottom: 4),
+                if (content.isNotEmpty)
+                  Text(
+                    translate(content),
+                    style: TextStyle(
+                        height: 1.4,
+                        color: NeaStyle.muted(context),
+                        fontSize: 13),
+                  ),
+                if (btnText.isNotEmpty)
+                  OutlinedButton(
+                    style: NeaStyle.outlined(context, border: warn),
+                    onPressed: onPressed,
+                    child: Text(translate(btnText)),
+                  ).marginOnly(top: 10),
+                if (help != null && link != null)
+                  TextButton(
+                    style: NeaStyle.link(context),
+                    onPressed: () async => await launchUrl(Uri.parse(link)),
+                    child: Text(translate(help)),
+                  ).marginOnly(top: 4),
+              ],
             ),
           ),
-      ],
+          if (closeButton == true)
+            IconButton(
+              tooltip: translate('Close'),
+              icon: Icon(Icons.close, size: 18, color: NeaStyle.muted(context)),
+              focusColor: NeaStyle.focusFill(context),
+              splashRadius: 18,
+              onPressed: closeCard,
+            ),
+        ],
+      ),
     );
   }
 

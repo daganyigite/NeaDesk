@@ -119,10 +119,10 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                 borderRadius: BorderRadius.circular(4),
                 color: _svcStopped.value ||
                         stateGlobal.svcStatus.value == SvcStatus.connecting
-                    ? kColorWarn
+                    ? NeaStyle.warning(context)
                     : (stateGlobal.svcStatus.value == SvcStatus.ready
-                        ? Color.fromARGB(255, 50, 190, 166)
-                        : Color.fromARGB(255, 224, 79, 95)),
+                        ? NeaStyle.success(context)
+                        : NeaStyle.error(context)),
               ),
             ).marginSymmetric(horizontal: em),
             Flexible(
@@ -187,6 +187,20 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
       stateGlobal.videoConnCount.value = status['video_conn_count'] as int;
     } catch (_) {}
   }
+}
+
+/// NEADESK : largeur maximale du contenu de la zone de connexion.
+const double _maxContentWidth = 880;
+
+/// NEADESK : un identifiant est valide s'il compte au moins 6 chiffres,
+/// ou si c'est un identifiant personnalisé (lettre puis 5 à 15 caractères),
+/// ou une adresse (IP, nom de machine, id@serveur).
+bool isValidRemoteId(String text) {
+  final id = text.replaceAll(RegExp(r'\s'), '');
+  if (id.isEmpty) return false;
+  if (RegExp(r'^[0-9]+$').hasMatch(id)) return id.length >= 6;
+  if (RegExp(r'[.:@]').hasMatch(id)) return id.length >= 3;
+  return RegExp(r'^[A-Za-z][A-Za-z0-9_-]{5,15}$').hasMatch(id);
 }
 
 /// Connection page for connecting to a remote peer.
@@ -310,13 +324,18 @@ class _ConnectionPageState extends State<ConnectionPage>
     return Container(
       color: NeaStyle.page(context),
       padding: const EdgeInsets.only(left: 32, right: 20, top: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildRemoteIDTextField(context),
-          const SizedBox(height: 24),
-          Expanded(child: PeerTabPage()),
-        ],
+      alignment: Alignment.topLeft,
+      // NEADESK : largeur limitée pour éviter le grand vide sur écran large.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildRemoteIDTextField(context),
+            const SizedBox(height: 24),
+            Expanded(child: PeerTabPage()),
+          ],
+        ),
       ),
     );
   }
@@ -457,6 +476,8 @@ class _ConnectionPageState extends State<ConnectionPage>
                               hintText: _idInputFocused.value
                                   ? null
                                   : translate('neadesk_enter_id'),
+                              hintStyle: NeaStyle.ui(context, 16,
+                                  color: NeaStyle.muted(context)),
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide: BorderSide(
@@ -477,7 +498,9 @@ class _ConnectionPageState extends State<ConnectionPage>
                             _idController.id = v;
                           },
                           onSubmitted: (_) {
-                            onConnect();
+                            if (isValidRemoteId(_idController.id)) {
+                              onConnect();
+                            }
                           },
                         ).workaroundFreezeLinuxMint());
                   },
@@ -552,12 +575,18 @@ class _ConnectionPageState extends State<ConnectionPage>
             const SizedBox(width: 10),
             SizedBox(
               height: 48,
-              child: ElevatedButton(
-                style: NeaStyle.primary(),
-                onPressed: () {
-                  onConnect();
-                },
-                child: Text(translate("Connect")),
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _idEditingController,
+                builder: (context, value, _) => ElevatedButton(
+                  style: NeaStyle.primary(context),
+                  onPressed: isValidRemoteId(value.text)
+                      ? () {
+                          _idController.id = value.text;
+                          onConnect();
+                        }
+                      : null,
+                  child: Text(translate("Connect")),
+                ),
               ),
             ),
           ],

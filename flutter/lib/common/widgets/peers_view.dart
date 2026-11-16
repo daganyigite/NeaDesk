@@ -17,6 +17,7 @@ import '../../common.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
 import 'peer_card.dart';
+import '../../desktop/widgets/neadesk_style.dart';
 
 typedef PeerFilter = bool Function(Peer peer);
 typedef PeerCardBuilder = Widget Function(Peer peer);
@@ -89,11 +90,20 @@ class _PeersView extends StatefulWidget {
 class _PeersViewState extends State<_PeersView>
     with WindowListener, WidgetsBindingObserver {
   static const int _maxQueryCount = 3;
+  // NEADESK : textes de l'état vide de chaque onglet (l'onglet Récents
+  // affiche le guide en 3 étapes).
   final HashMap<String, String> _emptyMessages = HashMap.from({
-    LoadEvent.recent: 'empty_recent_tip',
-    LoadEvent.favorite: 'empty_favorite_tip',
-    LoadEvent.lan: 'empty_lan_tip',
-    LoadEvent.addressBook: 'empty_address_book_tip',
+    LoadEvent.favorite: 'neadesk_empty_fav',
+    LoadEvent.lan: 'neadesk_empty_lan',
+    LoadEvent.addressBook: 'neadesk_empty_ab',
+    LoadEvent.group: 'neadesk_empty_group',
+  });
+  final HashMap<String, String> _emptyTitles = HashMap.from({
+    LoadEvent.recent: 'neadesk_empty_title_recent',
+    LoadEvent.favorite: 'neadesk_empty_title_fav',
+    LoadEvent.lan: 'neadesk_empty_title_lan',
+    LoadEvent.addressBook: 'neadesk_empty_title_ab',
+    LoadEvent.group: 'neadesk_empty_title_group',
   });
   final space = (isDesktop || isWebDesktop) ? 12.0 : 8.0;
   final _curPeers = <String>{};
@@ -187,31 +197,84 @@ class _PeersViewState extends State<_PeersView>
       child: Consumer<Peers>(builder: (context, peers, child) {
         if (peers.peers.isEmpty) {
           gFFI.peerTabModel.setCurrentTabCachedPeers([]);
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.sentiment_very_dissatisfied_rounded,
-                  color: Theme.of(context).tabBarTheme.labelColor,
-                  size: 40,
-                ).paddingOnly(bottom: 10),
-                Text(
-                  translate(
-                    _emptyMessages[widget.peers.loadEvent] ?? 'Empty',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).tabBarTheme.labelColor,
-                  ),
-                ),
-              ],
-            ),
-          );
+          return _buildEmptyState(context, widget.peers.loadEvent);
         } else {
           return _buildPeersView(peers);
         }
       }),
+    );
+  }
+
+  /// NEADESK : état vide adapté à chaque onglet (sans smiley ni « Oups »).
+  Widget _buildEmptyState(BuildContext context, String loadEvent) {
+    final title = _emptyTitles[loadEvent] ?? 'neadesk_empty_title_recent';
+    final text = _emptyMessages[loadEvent];
+    final isRecent = loadEvent == LoadEvent.recent || text == null;
+    Widget step(int n, String key) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: NeaStyle.accent.withOpacity(0.15),
+                  border: Border.all(color: NeaStyle.accent),
+                ),
+                child: Text('$n',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: NeaStyle.text(context))),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(translate(key),
+                    style:
+                        TextStyle(fontSize: 14, color: NeaStyle.text(context))),
+              ),
+            ],
+          ),
+        );
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SingleChildScrollView(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 520),
+          margin: const EdgeInsets.only(top: 16, right: 12),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: NeaStyle.panel(context),
+            border: Border.all(color: NeaStyle.line(context)),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(translate(title),
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: NeaStyle.text(context))),
+              const SizedBox(height: 14),
+              if (isRecent) ...[
+                step(1, 'neadesk_step_1'),
+                step(2, 'neadesk_step_2'),
+                step(3, 'neadesk_step_3'),
+              ] else
+                Text(translate(text),
+                    style: TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: NeaStyle.muted(context))),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

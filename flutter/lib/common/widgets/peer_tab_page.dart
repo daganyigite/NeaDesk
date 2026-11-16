@@ -111,7 +111,7 @@ class _PeerTabPageState extends State<PeerTabPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Obx(() => SizedBox(
-              height: 32,
+              height: 36,
               child: Container(
                 padding: stateGlobal.isPortrait.isTrue
                     ? EdgeInsets.symmetric(horizontal: 2)
@@ -134,6 +134,15 @@ class _PeerTabPageState extends State<PeerTabPage>
       ],
     );
   }
+
+  /// NEADESK : libellés courts des onglets (même ordre que PeerTabModel.tabNames).
+  static const List<String> neadeskTabLabels = [
+    'neadesk_tab_recent',
+    'neadesk_tab_fav',
+    'neadesk_tab_lan',
+    'neadesk_tab_ab',
+    'neadesk_tab_group',
+  ];
 
   Widget _createSwitchBar(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
@@ -166,12 +175,26 @@ class _PeerTabPageState extends State<PeerTabPage>
                     message: model.tabTooltip(t),
                     onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
                     child: InkWell(
+                      focusColor: MyTheme.accent.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(6),
                       child: Container(
                         decoration: (hover.value
                             ? (selected ? decoBorder : deco)
                             : (selected ? decoBorder : null)),
-                        child: Icon(model.tabIcon(t), color: color)
-                            .paddingSymmetric(horizontal: 4),
+                        // NEADESK : icône + libellé texte.
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(model.tabIcon(t), color: color, size: 18),
+                          if (!stateGlobal.isPortrait.isTrue) ...[
+                            const SizedBox(width: 6),
+                            Text(translate(neadeskTabLabels[t]),
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: color,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.normal)),
+                          ],
+                        ]).paddingSymmetric(horizontal: 6),
                       ).paddingSymmetric(horizontal: 4),
                       onTap: isOptionFixed(kOptionPeerTabIndex)
                           ? null
