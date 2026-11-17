@@ -1007,20 +1007,33 @@ class _CmControlPanel extends StatelessWidget {
           ],
         ),
         // NEADESK : option avancée, discrète, sous les boutons principaux.
+        // Fond bleu léger, différent du bleu plein de « Accepter ».
         if (showElevation && showAccept)
-          TextButton.icon(
-            style: NeaStyle.link(context).copyWith(
-                foregroundColor:
-                    MaterialStatePropertyAll(NeaStyle.muted(context))),
-            onPressed: () => checkClickTime(client.id, () {
-              handleAccept(context);
-              handleElevate(context);
-              windowManager.minimize();
-            }),
-            icon: const Icon(Icons.admin_panel_settings_outlined, size: 16),
-            label: Text(translate('neadesk_accept_admin'),
-                style: const TextStyle(fontSize: 12.5)),
-          ).marginOnly(top: 2),
+          SizedBox(
+            width: double.infinity,
+            height: 36,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                backgroundColor: NeaStyle.accent.withOpacity(0.16),
+                foregroundColor: NeaStyle.text(context),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ).copyWith(
+                  side: MaterialStateProperty.resolveWith((states) =>
+                      states.contains(MaterialState.focused)
+                          ? const BorderSide(color: NeaStyle.accent, width: 2)
+                          : BorderSide(
+                              color: NeaStyle.accent.withOpacity(0.45)))),
+              onPressed: () => checkClickTime(client.id, () {
+                handleAccept(context);
+                handleElevate(context);
+                windowManager.minimize();
+              }),
+              icon: const Icon(Icons.admin_panel_settings_outlined, size: 16),
+              label: Text(translate('neadesk_accept_admin'),
+                  style: const TextStyle(fontSize: 13)),
+            ),
+          ).marginOnly(left: 4, right: 4, top: 4),
       ],
     ).marginOnly(bottom: buttonBottomMargin);
   }
