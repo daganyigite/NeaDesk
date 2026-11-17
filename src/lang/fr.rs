@@ -877,5 +877,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("neadesk_perm_block", "Bloquer mon clavier et ma souris"),
         ("neadesk_perm_privacy", "Masquer mon écran (mode confidentialité)"),
         ("neadesk_accept_admin", "Accepter avec droits administrateur"),
+        ("neadesk_fps", "i/s"),
+        ("neadesk_encrypted", "Chiffré"),
+        ("neadesk_end_session", "Terminer"),
     ].iter().cloned().collect();
 }

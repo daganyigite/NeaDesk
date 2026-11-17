@@ -22,6 +22,7 @@ import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import '../../common/shared_state.dart';
 import './popup_menu.dart';
+import './neadesk_style.dart';
 import './kb_layout_type_chooser.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 import 'package:flutter_hbb/common/widgets/custom_scale_base.dart';
@@ -325,13 +326,14 @@ class ToolbarState {
 }
 
 class _ToolbarTheme {
-  static const Color blueColor = MyTheme.button;
-  static const Color hoverBlueColor = MyTheme.accent;
-  static Color inactiveColor = Colors.grey[800]!;
-  static Color hoverInactiveColor = Colors.grey[850]!;
+  // NEADESK : couleurs de la palette (barre sombre, accent bleu, rouge erreur).
+  static const Color blueColor = NeaStyle.accent;
+  static const Color hoverBlueColor = NeaStyle.accentHover;
+  static Color inactiveColor = NeaStyle.darkBorder;
+  static Color hoverInactiveColor = NeaStyle.darkField;
 
-  static const Color redColor = Colors.redAccent;
-  static const Color hoverRedColor = Colors.red;
+  static const Color redColor = NeaStyle.darkError;
+  static const Color hoverRedColor = Color(0xFFDC2626);
   // kMinInteractiveDimension
   static const double height = 20.0;
   static const double dividerHeight = 12.0;
@@ -851,8 +853,12 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       toolbarItems.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
     }
     if (!isWeb) toolbarItems.add(_RecordMenu());
-    toolbarItems.add(_CloseMenu(id: widget.id, ffi: widget.ffi));
-    final toolbarBorderRadius = BorderRadius.all(Radius.circular(4.0));
+    toolbarItems.add(
+        _CloseMenu(id: widget.id, ffi: widget.ffi, labeled: isHorizontal));
+    if (isHorizontal) {
+      toolbarItems.insert(0, _SessionInfo(id: widget.id, ffi: widget.ffi));
+    }
+    final toolbarBorderRadius = BorderRadius.all(Radius.circular(10.0));
     // innerAxis: how the toolbar icons themselves flow.
     // outerAxis: how the toolbar block and the handle stack against each other
     // (perpendicular to the dock edge, so the handle hangs off the interior face).
@@ -865,11 +871,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       elevation: _ToolbarTheme.elevation,
       shadowColor: MyTheme.color(context).shadow,
       borderRadius: toolbarBorderRadius,
-      color: Theme.of(context)
-          .menuBarTheme
-          .style
-          ?.backgroundColor
-          ?.resolve(MaterialState.values.toSet()),
+      color: NeaStyle.darkPanel,
       child: SingleChildScrollView(
         scrollDirection: innerAxis,
         child: Theme(
@@ -2999,23 +3001,124 @@ class _RecordMenu extends StatelessWidget {
   }
 }
 
-class _CloseMenu extends StatelessWidget {
+/// NEADESK : nom du poste, identifiant, latence, images/s et chiffrement.
+class _SessionInfo extends StatelessWidget {
   final String id;
   final FFI ffi;
-  const _CloseMenu({Key? key, required this.id, required this.ffi})
+  const _SessionInfo({Key? key, required this.id, required this.ffi})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([ffi.ffiModel, ffi.qualityMonitorModel]),
+      builder: (context, _) {
+        final q = ffi.qualityMonitorModel.data;
+        final name = ffi.ffiModel.pi.hostname;
+        final fps = q.fps ?? '';
+        final details = <String>[
+          if ((q.delay ?? '').isNotEmpty) q.delay!,
+          if (fps.isNotEmpty && !fps.contains(' '))
+            '$fps ${translate('neadesk_fps')}',
+        ];
+        const muted = TextStyle(fontSize: 12, color: NeaStyle.darkMuted);
+        return Container(
+          height: _ToolbarTheme.buttonSize,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          margin: const EdgeInsets.symmetric(
+              horizontal: 4, vertical: _ToolbarTheme.buttonVMargin),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                    shape: BoxShape.circle, color: NeaStyle.darkSuccess),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                name.isEmpty ? id : name,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: NeaStyle.darkText),
+              ),
+              if (name.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(id,
+                    style: const TextStyle(
+                        fontFamily: NeaStyle.mono,
+                        fontFamilyFallback: NeaStyle.monoFallback,
+                        fontSize: 12,
+                        color: NeaStyle.darkMuted)),
+              ],
+              if (details.isNotEmpty)
+                Text('  ·  ${details.join('  ·  ')}', style: muted),
+              // Affiché seulement si la session est réellement chiffrée.
+              if (ffi.ffiModel.secure == true) ...[
+                const SizedBox(width: 10),
+                const Icon(Icons.lock_outline_rounded,
+                    size: 14, color: NeaStyle.darkSuccess),
+                const SizedBox(width: 4),
+                Text(translate('neadesk_encrypted'),
+                    style: const TextStyle(
+                        fontSize: 12, color: NeaStyle.darkSuccess)),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CloseMenu extends StatelessWidget {
+  final String id;
+  final FFI ffi;
+  final bool labeled;
+  const _CloseMenu(
+      {Key? key, required this.id, required this.ffi, this.labeled = false})
+      : super(key: key);
+
+  Future<void> _close() async {
+    if (await showConnEndAuditDialogCloseCanceled(ffi: ffi)) {
+      return;
+    }
+    closeConnection(id: id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // NEADESK : bouton rouge « Terminer » quand la barre est horizontale.
+    if (labeled) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: 4, vertical: _ToolbarTheme.buttonVMargin),
+        child: SizedBox(
+          height: _ToolbarTheme.buttonSize,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              backgroundColor: _ToolbarTheme.redColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(_ToolbarTheme.iconRadius)),
+            ),
+            onPressed: _close,
+            icon: const Icon(Icons.call_end_rounded, size: 16),
+            label: Text(translate('neadesk_end_session'),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      );
+    }
     return _IconMenuButton(
       assetName: 'assets/close.svg',
       tooltip: 'Close',
-      onPressed: () async {
-        if (await showConnEndAuditDialogCloseCanceled(ffi: ffi)) {
-          return;
-        }
-        closeConnection(id: id);
-      },
+      onPressed: _close,
       color: _ToolbarTheme.redColor,
       hoverColor: _ToolbarTheme.hoverRedColor,
     );

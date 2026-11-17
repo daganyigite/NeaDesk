@@ -12,6 +12,7 @@ import '../../common.dart';
 import '../../common/widgets/dialog.dart';
 import '../../consts.dart';
 import '../../models/platform_model.dart';
+import '../../desktop/widgets/neadesk_style.dart';
 import '../../models/server_model.dart';
 import '../../utils/android_documents.dart';
 import 'home_page.dart';
@@ -465,107 +466,97 @@ class ServerInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final serverModel = Provider.of<ServerModel>(context);
 
-    const Color colorPositive = Colors.green;
-    const Color colorNegative = Colors.red;
-    const double iconMarginRight = 15;
-    const double iconSize = 24;
-    const TextStyle textStyleHeading = TextStyle(
-        fontSize: 16.0, fontWeight: FontWeight.bold, color: Colors.grey);
-    const TextStyle textStyleValue =
-        TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold);
-
     void copyToClipboard(String value) {
       Clipboard.setData(ClipboardData(text: value));
       showToast(translate('Copied'));
     }
 
-    Widget ConnectionStateNotification() {
-      if (serverModel.connectStatus == -1) {
-        return Row(children: [
-          const Icon(Icons.warning_amber_sharp,
-                  color: colorNegative, size: iconSize)
-              .marginOnly(right: iconMarginRight),
-          Expanded(child: Text(translate('not_ready_status')))
-        ]);
-      } else if (serverModel.connectStatus == 0) {
-        return Row(children: [
-          SizedBox(width: 20, height: 20, child: CircularProgressIndicator())
-              .marginOnly(left: 4, right: iconMarginRight),
-          Expanded(child: Text(translate('connecting_status')))
-        ]);
-      } else {
-        return Row(children: [
-          const Icon(Icons.check, color: colorPositive, size: iconSize)
-              .marginOnly(right: iconMarginRight),
-          Expanded(child: Text(translate('Ready')))
-        ]);
-      }
+    // NEADESK : point de couleur + texte de l'état de la connexion.
+    Widget connectionState() {
+      final (color, text) = serverModel.connectStatus == -1
+          ? (NeaStyle.error(context), translate('not_ready_status'))
+          : serverModel.connectStatus == 0
+              ? (NeaStyle.warning(context), translate('connecting_status'))
+              : (NeaStyle.success(context), translate('neadesk_ready'));
+      return Row(children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        ).marginOnly(right: 10),
+        Expanded(
+            child: Text(text,
+                style: TextStyle(fontSize: 14, color: NeaStyle.text(context))))
+      ]);
     }
+
+    Widget iconButton(IconData icon, String tooltip, VoidCallback onTap) =>
+        IconButton(
+          tooltip: translate(tooltip),
+          visualDensity: VisualDensity.compact,
+          icon: Icon(icon, color: NeaStyle.text(context)),
+          onPressed: onTap,
+        );
 
     final showOneTime = serverModel.approveMode != 'click' &&
         serverModel.verificationMethod != kUsePermanentPassword;
+    final id = model.serverId.value.text.trim();
+    final password = model.serverPasswd.value.text.trim();
     return PaddingCard(
-        title: translate('Your Device'),
         child: Column(
-          // ID
-          children: [
-            Row(children: [
-              const Icon(Icons.perm_identity,
-                      color: Colors.grey, size: iconSize)
-                  .marginOnly(right: iconMarginRight),
-              Text(
-                translate('ID'),
-                style: textStyleHeading,
-              )
-            ]),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(
-                model.serverId.value.text,
-                style: textStyleValue,
-              ),
-              IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: Icon(Icons.copy_outlined),
-                  onPressed: () {
-                    copyToClipboard(model.serverId.value.text.trim());
-                  })
-            ]).marginOnly(left: 39, bottom: 10),
-            // Password
-            Row(children: [
-              const Icon(Icons.lock_outline, color: Colors.grey, size: iconSize)
-                  .marginOnly(right: iconMarginRight),
-              Text(
-                translate('One-time Password'),
-                style: textStyleHeading,
-              )
-            ]),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(
-                !showOneTime ? '-' : model.serverPasswd.value.text,
-                style: textStyleValue,
-              ),
-              !showOneTime
-                  ? SizedBox.shrink()
-                  : Row(children: [
-                      IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.refresh),
-                          onPressed: () => bind.mainUpdateTemporaryPassword()),
-                      IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: Icon(Icons.copy_outlined),
-                          onPressed: () {
-                            copyToClipboard(
-                                model.serverPasswd.value.text.trim());
-                          })
-                    ])
-            ]).marginOnly(left: 40, bottom: 15),
-            ConnectionStateNotification()
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(translate('neadesk_your_device').toUpperCase(),
+            style: NeaStyle.sectionTitle(context)),
+        const SizedBox(height: 4),
+        Text(translate('neadesk_give_info'),
+            style: TextStyle(fontSize: 13, color: NeaStyle.muted(context))),
+        const SizedBox(height: 16),
+        Text(translate('neadesk_id_label'), style: NeaStyle.label(context)),
+        Row(children: [
+          Expanded(
+            child: Text(model.serverId.value.text,
+                style: NeaStyle.monoStyle(context, 26)),
+          ),
+          iconButton(Icons.copy_rounded, 'neadesk_copy_id',
+              () => copyToClipboard(id)),
+        ]),
+        const SizedBox(height: 10),
+        Text(translate('One-time Password'), style: NeaStyle.label(context)),
+        Row(children: [
+          Expanded(
+            child: Text(!showOneTime ? '-' : model.serverPasswd.value.text,
+                style: NeaStyle.monoStyle(context, 20,
+                    weight: FontWeight.w500)),
+          ),
+          if (showOneTime) ...[
+            iconButton(Icons.refresh_rounded, 'Refresh Password',
+                () => bind.mainUpdateTemporaryPassword()),
+            iconButton(Icons.copy_rounded, 'neadesk_copy_password',
+                () => copyToClipboard(password)),
           ],
-        ));
+        ]),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: OutlinedButton.icon(
+            style: NeaStyle.outlined(context),
+            onPressed: () => copyToClipboard([
+              translate('neadesk_invite_intro'),
+              '${translate('neadesk_id_label')} : $id',
+              if (showOneTime) '${translate('One-time Password')} : $password',
+            ].join('\n')),
+            icon: const Icon(Icons.send_outlined, size: 16),
+            label: Text(translate('neadesk_copy_invite')),
+          ),
+        ),
+        const SizedBox(height: 14),
+        connectionState(),
+      ],
+    ));
   }
 }
-
 class PermissionChecker extends StatefulWidget {
   const PermissionChecker({Key? key}) : super(key: key);
 
@@ -756,12 +747,30 @@ class ConnectionManager extends StatelessWidget {
                                       client.unreadChatMessageCount)))
                     ],
                   ),
-                  client.authorized
-                      ? const SizedBox.shrink()
-                      : Text(
-                          translate("android_new_connection_tip"),
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ).marginOnly(bottom: 5),
+                  if (!client.authorized) ...[
+                    Text(
+                      translate("android_new_connection_tip"),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ).marginOnly(bottom: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: NeaStyle.warning(context).withOpacity(0.12),
+                        border: Border.all(
+                            color: NeaStyle.warning(context).withOpacity(0.5)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.warning_amber_rounded,
+                            size: 18, color: NeaStyle.warning(context)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: Text(translate('neadesk_accept_warning'),
+                                style: const TextStyle(fontSize: 13))),
+                      ]),
+                    ).marginOnly(bottom: 10),
+                  ],
                   client.authorized
                       ? _buildDisconnectButton(client)
                       : _buildNewConnectionHint(serverModel, client),
@@ -773,7 +782,9 @@ class ConnectionManager extends StatelessWidget {
 
   Widget _buildDisconnectButton(Client client) {
     final disconnectButton = ElevatedButton.icon(
-      style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.red)),
+      style: ButtonStyle(
+          backgroundColor:
+              MaterialStatePropertyAll(NeaStyle.darkError)),
       icon: const Icon(Icons.close),
       onPressed: () {
         bind.cmCloseConnection(connId: client.id);
@@ -812,20 +823,37 @@ class ConnectionManager extends StatelessWidget {
   }
 
   Widget _buildNewConnectionHint(ServerModel serverModel, Client client) {
-    return Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-      TextButton(
-          child: Text(translate("Dismiss")),
-          onPressed: () {
-            serverModel.sendLoginResponse(client, false);
-          }).marginOnly(right: 15),
-      if (serverModel.approveMode != 'password')
-        ElevatedButton.icon(
-            icon: const Icon(Icons.check),
-            label: Text(translate("Accept")),
-            onPressed: () {
-              serverModel.sendLoginResponse(client, true);
-            }),
-    ]);
+    return Builder(
+      builder: (context) => Row(children: [
+        Expanded(
+          child: SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              style: NeaStyle.outlined(context),
+              onPressed: () {
+                serverModel.sendLoginResponse(client, false);
+              },
+              child: Text(translate("neadesk_refuse")),
+            ),
+          ),
+        ),
+        if (serverModel.approveMode != 'password') ...[
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: 44,
+              child: ElevatedButton(
+                style: NeaStyle.primary(context),
+                onPressed: () {
+                  serverModel.sendLoginResponse(client, true);
+                },
+                child: Text(translate("Accept")),
+              ),
+            ),
+          ),
+        ],
+      ]),
+    );
   }
 
   List<Widget> _buildNewVoiceCallHint(
@@ -885,8 +913,11 @@ class PaddingCard extends StatelessWidget {
     return SizedBox(
         width: double.maxFinite,
         child: Card(
+          color: NeaStyle.panel(context),
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: NeaStyle.line(context)),
           ),
           margin: const EdgeInsets.fromLTRB(12.0, 10.0, 12.0, 0),
           child: Padding(

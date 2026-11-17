@@ -16,6 +16,8 @@ import '../../common/widgets/autocomplete.dart';
 import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
+import '../../desktop/widgets/neadesk_style.dart';
+import '../../desktop/pages/connection_page.dart' show isValidRemoteId;
 import 'home_page.dart';
 
 /// Connection page for connecting to a remote peer.
@@ -149,13 +151,14 @@ class _ConnectionPageState extends State<ConnectionPage> {
   /// Search for a peer and connect to it if the id exists.
   Widget _buildRemoteIDTextField() {
     final w = SizedBox(
-      height: 84,
+      height: 72,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
         child: Ink(
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.all(Radius.circular(13)),
+            color: NeaStyle.panel(context),
+            border: Border.all(color: NeaStyle.field(context)),
+            borderRadius: BorderRadius.all(Radius.circular(10)),
           ),
           child: Row(
             children: <Widget>[
@@ -230,31 +233,17 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         onChanged: (String text) {
                           _idController.id = text;
                         },
-                        style: const TextStyle(
-                          fontFamily: 'WorkSans',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 30,
-                          color: MyTheme.idColor,
-                        ),
+                        style: NeaStyle.monoStyle(context, 22),
                         decoration: InputDecoration(
-                          labelText: translate('Remote ID'),
-                          // hintText: 'Enter your remote ID',
+                          hintText: translate('neadesk_enter_id'),
+                          hintStyle: NeaStyle.ui(context, 16,
+                              color: NeaStyle.muted(context)),
                           border: InputBorder.none,
-                          helperStyle: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: MyTheme.darkGray,
-                          ),
-                          labelStyle: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            letterSpacing: 0.2,
-                            color: MyTheme.darkGray,
-                          ),
+                          filled: false,
                         ),
                         inputFormatters: [IDTextInputFormatter()],
                         onSubmitted: (_) {
-                          onConnect();
+                          if (isValidRemoteId(_idController.id)) onConnect();
                         },
                       );
                     },
@@ -334,24 +323,49 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         },
                         icon: Icon(Icons.clear, color: MyTheme.darkGray)),
                   )),
-              SizedBox(
-                width: 60,
-                height: 60,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_forward,
-                      color: MyTheme.darkGray, size: 45),
-                  onPressed: onConnect,
-                ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _idEditingController,
+                builder: (context, value, _) {
+                  final valid = isValidRemoteId(value.text);
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: IconButton.filled(
+                        tooltip: translate('Connect'),
+                        style: IconButton.styleFrom(
+                          backgroundColor: NeaStyle.accent,
+                          disabledBackgroundColor: NeaStyle.line(context),
+                        ),
+                        icon: Icon(Icons.arrow_forward_rounded,
+                            color: valid
+                                ? NeaStyle.onAccent
+                                : NeaStyle.muted(context)),
+                        onPressed: valid
+                            ? () {
+                                _idController.id = value.text;
+                                onConnect();
+                              }
+                            : null,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
         ),
       ),
     );
-    final child = Column(children: [
+    final child = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (isWebDesktop)
         getConnectionPageTitle(context, true)
-            .marginOnly(bottom: 10, top: 15, left: 12),
+            .marginOnly(bottom: 10, top: 15, left: 12)
+      else
+        Text(translate('neadesk_control_remote').toUpperCase(),
+                style: NeaStyle.sectionTitle(context))
+            .marginOnly(top: 12, left: 4, bottom: 2),
       w
     ]);
     return Align(
